@@ -8,8 +8,22 @@
 </head>
 <body>
     <h1>Netflix Movies with IMDb Ratings</h1>
-    <div id="movie-list">
+
+    <div class="main-container">
+
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Search by title or description...">
+            <button id="sortTitleAsc">Sort by Title (A-Z)</button>
+            <button id="sortTitleDesc">Sort by Title (Z-A)</button>
+            <button id="sortScoreDesc">Sort by IMDb Score (High to Low)</button>
+            <button id="sortScoreAsc">Sort by IMDb Score (Low to High)</button>
+            <button id="spinWheelBtn">Pick a Random Movie!</button>
         </div>
+
+        <div id="movie-list"></div>
+
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
