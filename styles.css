@@ -1,59 +1,140 @@
 /* General Body and Typography */
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern, readable font */
-    background-color: #141414; /* Very dark background for a cinematic feel */
-    color: #f5f5f1; /* Light grey for text, good contrast */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #141414;
+    color: #f5f5f1;
     margin: 0;
-    padding: 40px 20px;
     line-height: 1.6;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center content horizontally */
-    min-height: 100vh; /* Ensure body takes full viewport height */
 }
 
 h1 {
-    color: #e50914; /* Netflix red */
+    color: #e50914;
     text-align: center;
-    margin-bottom: 50px;
+    margin: 20px 0;
     font-size: 2.8em;
     font-weight: 700;
     letter-spacing: 1px;
-    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Main container for overall layout */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Controls section at the top */
+.controls {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: #141414;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    border-bottom: 2px solid #e50914;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Style for the search input element */
+#searchInput {
+    width: 300px;
+    height: 45px;
+    padding: 12px 20px;
+    margin: 10px;
+    border: 2px solid #444;
+    border-radius: 25px;
+    font-size: 18px;
+    font-family: 'Arial', sans-serif;
+    color: #f5f5f1;
+    background-color: #2b2b2b;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Style when the search input is focused */
+#searchInput:focus {
+    border-color: #e50914;
+    box-shadow: 0 0 0 4px rgba(229, 9, 20, 0.5);
+    outline: none;
+}
+
+/* Style for the placeholder text */
+#searchInput::placeholder {
+    color: #888;
+    font-style: italic;
+}
+
+/* Style for the sort buttons and random movie button */
+.controls button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 25px;
+    background-color: #e50914;
+    color: #fff;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s, transform 0.2s;
+}
+
+.controls button:hover {
+    background-color: #ff2b38;
+    transform: translateY(-2px);
+}
+
+/* Style for the spinwheel button to make it stand out */
+#spinWheelBtn {
+    background-color: #4a4a4a;
+    border: 2px solid #fff;
+    color: #fff;
+    transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+#spinWheelBtn:hover {
+    background-color: #666;
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
 }
 
 /* Movie List Container */
 #movie-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive grid for movie cards */
-    gap: 30px; /* Space between movie cards */
-    max-width: 1200px; /* Max width for the grid to keep it tidy */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
     width: 100%;
+    margin: 0 auto;
+    padding: 40px 20px;
 }
 
 /* Individual Movie Card Styling */
 .movie-item {
-    background-color: #212121; /* Slightly lighter dark background for cards */
-    border-radius: 12px; /* Smoother rounded corners */
-    overflow: hidden; /* Ensures content stays within rounded corners */
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6); /* Prominent shadow for depth */
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth hover effects */
+    background-color: #212121;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* Pushes content to top/bottom */
+    justify-content: space-between;
     padding: 20px;
     border: 1px solid #333;
 }
 
 .movie-item:hover {
-    transform: translateY(-8px); /* Lift effect on hover */
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.8); /* Enhanced shadow on hover */
+    transform: translateY(-8px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.8);
 }
 
 .movie-title {
     font-size: 1.6em;
     font-weight: 600;
-    color: #ffffff; /* Brighter white for titles */
+    color: #ffffff;
     margin: 0 0 10px 0;
     text-align: center;
 }
@@ -61,17 +142,17 @@ h1 {
 .imdb-rating {
     font-size: 1.2em;
     font-weight: 500;
-    color: #f5c518; /* IMDb's gold color */
-    background-color: #2b2b2b; /* Dark background for the rating badge */
+    color: #f5c518;
+    background-color: #2b2b2b;
     padding: 10px 15px;
-    margin-top: auto; /* Pushes rating to the bottom of the card */
+    margin-top: auto;
     text-align: center;
-    border-radius: 8px; /* Rounded corners for the rating badge */
+    border-radius: 8px;
     border: 1px solid #444;
 }
 
 .imdb-rating strong {
-    font-size: 1.4em; /* Make the rating number slightly larger */
+    font-size: 1.4em;
     font-weight: 700;
 }
 
@@ -81,10 +162,10 @@ h1 {
     width: 80%;
     margin: 20px auto 0;
     padding: 12px 25px;
-    background-color: #e50914; /* Netflix red */
+    background-color: #e50914;
     color: #ffffff;
     text-align: center;
-    text-decoration: none; /* Remove underline from link */
+    text-decoration: none;
     font-weight: bold;
     font-size: 1.1em;
     border-radius: 8px;
@@ -93,18 +174,15 @@ h1 {
 }
 
 .netflix-link-button:hover {
-    background-color: #ff2b38; /* Lighter red on hover */
-    transform: scale(1.05); /* Slight grow effect */
+    background-color: #ff2b38;
+    transform: scale(1.05);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    body {
-        padding: 20px 10px;
-    }
     h1 {
         font-size: 2.2em;
-        margin-bottom: 40px;
+        margin-bottom: 20px;
     }
     #movie-list {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -119,9 +197,15 @@ h1 {
 }
 
 @media (max-width: 480px) {
+    .controls {
+        flex-direction: column;
+    }
+    #searchInput {
+        width: 90%;
+    }
     h1 {
         font-size: 1.8em;
-        margin-bottom: 25px;
+        margin-bottom: 15px;
     }
     #movie-list {
         grid-template-columns: 1fr;
