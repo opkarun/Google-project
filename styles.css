@@ -1,0 +1,130 @@
+/* General Body and Typography */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern, readable font */
+    background-color: #141414; /* Very dark background for a cinematic feel */
+    color: #f5f5f1; /* Light grey for text, good contrast */
+    margin: 0;
+    padding: 40px 20px;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
+    min-height: 100vh; /* Ensure body takes full viewport height */
+}
+
+h1 {
+    color: #e50914; /* Netflix red */
+    text-align: center;
+    margin-bottom: 50px;
+    font-size: 2.8em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5); /* Subtle shadow for depth */
+}
+
+/* Movie List Container */
+#movie-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive grid for movie cards */
+    gap: 30px; /* Space between movie cards */
+    max-width: 1200px; /* Max width for the grid to keep it tidy */
+    width: 100%;
+}
+
+/* Individual Movie Card Styling */
+.movie-item {
+    background-color: #212121; /* Slightly lighter dark background for cards */
+    border-radius: 12px; /* Smoother rounded corners */
+    overflow: hidden; /* Ensures content stays within rounded corners */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6); /* Prominent shadow for depth */
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smooth hover effects */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* Pushes content to top/bottom */
+    padding: 20px;
+    border: 1px solid #333;
+}
+
+.movie-item:hover {
+    transform: translateY(-8px); /* Lift effect on hover */
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.8); /* Enhanced shadow on hover */
+}
+
+.movie-title {
+    font-size: 1.6em;
+    font-weight: 600;
+    color: #ffffff; /* Brighter white for titles */
+    margin: 0 0 10px 0;
+    text-align: center;
+}
+
+.imdb-rating {
+    font-size: 1.2em;
+    font-weight: 500;
+    color: #f5c518; /* IMDb's gold color */
+    background-color: #2b2b2b; /* Dark background for the rating badge */
+    padding: 10px 15px;
+    margin-top: auto; /* Pushes rating to the bottom of the card */
+    text-align: center;
+    border-radius: 8px; /* Rounded corners for the rating badge */
+    border: 1px solid #444;
+}
+
+.imdb-rating strong {
+    font-size: 1.4em; /* Make the rating number slightly larger */
+    font-weight: 700;
+}
+
+/* Watch on Netflix Button */
+.netflix-link-button {
+    display: block;
+    width: 80%;
+    margin: 20px auto 0;
+    padding: 12px 25px;
+    background-color: #e50914; /* Netflix red */
+    color: #ffffff;
+    text-align: center;
+    text-decoration: none; /* Remove underline from link */
+    font-weight: bold;
+    font-size: 1.1em;
+    border-radius: 8px;
+    transition: background-color 0.2s ease-in-out, transform 0.2s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.netflix-link-button:hover {
+    background-color: #ff2b38; /* Lighter red on hover */
+    transform: scale(1.05); /* Slight grow effect */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    body {
+        padding: 20px 10px;
+    }
+    h1 {
+        font-size: 2.2em;
+        margin-bottom: 40px;
+    }
+    #movie-list {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 25px;
+    }
+    .movie-item {
+        padding: 15px;
+    }
+    .netflix-link-button {
+        width: 90%;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.8em;
+        margin-bottom: 25px;
+    }
+    #movie-list {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
