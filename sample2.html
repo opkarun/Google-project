@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="logo.png" type="image/png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Penetration Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- jsPDF and html2canvas for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c;
+        }
+        .custom-checkbox:checked {
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+            background-color: #0d9488;
+            border-color: #14b8a6;
+        }
+        .nav-link.active {
+            color: #2dd4bf; /* teal-400 */
+            border-bottom-color: #2dd4bf;
+        }
+        /* Chatbot Styles */
+        #chat-window { transition: all 0.3s ease-in-out; }
+        .chat-message { max-width: 80%; }
+        .user-message { background-color: #0d9488; color: white; align-self: flex-end; }
+        .ai-message { background-color: #374151; color: #d1d5db; align-self: flex-start; }
+        .loading-dots span {
+            animation: blink 1.4s infinite both;
+        }
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+        /* Print Styles for PDF */
+        @media print {
+            body {
+                background-color: white !important;
+                color: black !important;
+                margin: 0;
+                padding: 0;
+            }
+            #appPage, .page-content {
+                width: 100%;
+                box-shadow: none;
+                border: none;
+            }
+            .hide-on-print {
+                display: none !important;
+            }
+            .page-content:not(#scannerPage) {
+                display: block !important;
+            }
+            #results, #results * {
+                visibility: visible;
+                color: black !important;
+            }
+            #results {
+                padding: 20px;
+                background-color: white !important;
+                border: 1px solid #ccc !important;
+            }
+            #results h2, #results h3 {
+                color: #0d9488 !important;
+            }
+            #results div[class*="border-"] {
+                border-color: #ccc !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div id="loginPage" class="w-full max-w-sm">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-lg">
+            <div class="flex items-center justify-center text-2xl font-bold text-teal-400 mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.417l5.318-2.659A12.053 12.053 0 0112 18.25a12.053 12.053 0 015.682-.338L21 20.417c.073-.418.062-1.22.03-2.138a12.112 12.112 0 00-4.412-8.318z"></path>
+                </svg>
+                <span>AI Penetration Tester</span>
+            </div>
+            <p class="text-center text-gray-400 mb-6">Please log in to continue</p>
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-medium text-gray-300 mb-2">Username</label>
+                <input type="text" id="username" value="admin" class="w-full px-4 py-2 bg-gray-700 text-gray-200 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+            <div class="mb-6">
+                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                <input type="password" id="password" value="password" class="w-full px-4 py-2 bg-gray-700 text-gray-200 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+            <p id="loginError" class="text-red-400 text-sm text-center mb-4 hidden">Invalid username or password.</p>
+            <button id="loginButton" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-lg shadow-md transition duration-300">Login</button>
+        </div>
+    </div>
+
+    <div id="appPage" class="bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-4xl hidden">
+        <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-4 hide-on-print">
+            <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-3 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 20.417l5.318-2.659A12.053 12.053 0 0112 18.25a12.053 12.053 0 015.682-.338L21 20.417c.073-.418.062-1.22.03-2.138a12.112 12.112 0 00-4.412-8.318z"></path>
+                </svg>
+                <h1 class="text-2xl font-bold text-teal-400">Security Dashboard</h1>
+            </div>
+            <button id="logoutButton" class="bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">Logout</button>
+        </div>
+        
+        <nav class="flex space-x-2 md:space-x-6 mb-6 overflow-x-auto hide-on-print">
+            <button data-target="scannerPage" class="nav-link text-gray-400 hover:text-teal-400 transition pb-1 border-b-2 border-transparent px-2">Scanner</button>
+            <button data-target="attacksPage" class="nav-link text-gray-400 hover:text-teal-400 transition pb-1 border-b-2 border-transparent px-2">Attack Types</button>
+            <button data-target="liveAttacksPage" class="nav-link text-gray-400 hover:text-teal-400 transition pb-1 border-b-2 border-transparent px-2">Live Simulators</button>
+            <button data-target="checklistPage" class="nav-link text-gray-400 hover:text-teal-400 transition pb-1 border-b-2 border-transparent px-2">Checklist</button>
+            <button data-target="caseStudiesPage" class="nav-link text-gray-400 hover:text-teal-400 transition pb-1 border-b-2 border-transparent px-2">Case Studies</button>
+        </nav>
+
+        <div id="scannerPage" class="page-content">
+            <div id="scanner-ui-container"></div>
+            <div id="reportControls" class="flex justify-end items-center mb-4 hidden space-x-2 hide-on-print">
+                <button id="aiSummaryButton" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 hidden">✨ Generate AI Summary & Fixes</button>
+                <button id="pdfButton" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow-md transition duration-300">Download Report as PDF</button>
+            </div>
+            <div id="results" class="bg-gray-700 p-6 rounded-lg border border-gray-600 hidden">
+                <!-- Report will be rendered here -->
+            </div>
+            <div id="aiSummaryContainer" class="bg-gray-900/50 mt-4 p-6 rounded-lg border border-gray-600 hidden">
+                <!-- AI Summary will be rendered here -->
+            </div>
+        </div>
+        
+        <div id="attacksPage" class="page-content hidden">
+            <h2 class="text-xl font-semibold mb-6 text-teal-400">Common Attack Vectors Explained</h2>
+            <div class="space-y-8">
+                <!-- Attack Type 1: SQL Injection -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">SQL Injection (SQLi)</h3>
+                    <p class="text-sm text-gray-400 mt-2">SQLi involves inserting malicious SQL queries into user input fields. If the application backend doesn't properly sanitize this input, the malicious query can be executed against the database, allowing attackers to view, modify, or delete sensitive data.</p>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">How to Prevent:</h4>
+                        <p class="text-xs text-gray-400 mt-1">Use <strong class="text-teal-300">Prepared Statements (Parameterized Queries)</strong>. This separates the SQL command from the user-supplied data, ensuring the data is always treated as data, not as executable code.</p>
+                    </div>
+                </div>
+                <!-- Attack Type 2: Cross-Site Scripting (XSS) -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">Cross-Site Scripting (XSS)</h3>
+                    <p class="text-sm text-gray-400 mt-2">XSS occurs when an attacker injects malicious scripts (usually JavaScript) into a web page viewed by other users. This script can steal session cookies, deface websites, or redirect the user to a malicious site. The "Live Simulators" page has a great example of this.</p>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">How to Prevent:</h4>
+                        <p class="text-xs text-gray-400 mt-1">1. <strong class="text-teal-300">Validate and Sanitize Input:</strong> Treat all user input as untrusted. <br>2. <strong class="text-teal-300">Encode Output:</strong> Before rendering user-generated content in a page, encode special characters (e.g., `&lt;` becomes `&amp;lt;`). <br>3. <strong class="text-teal-300">Use Content-Security-Policy (CSP):</strong> Implement a CSP header to restrict which scripts can be executed.</p>
+                    </div>
+                </div>
+                    <!-- Attack Type 3: Cross-Site Request Forgery (CSRF) -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">Cross-Site Request Forgery (CSRF)</h3>
+                    <p class="text-sm text-gray-400 mt-2">CSRF tricks a logged-in user into unknowingly submitting a malicious request to a website they trust. For example, an attacker could craft a link that, when clicked by a victim, transfers money from their bank account. The attack relies on the site automatically including the user's session cookies with the request.</p>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">How to Prevent:</h4>
+                        <p class="text-xs text-gray-400 mt-1">Use <strong class="text-teal-300">Anti-CSRF Tokens</strong>. These are unique, unpredictable tokens generated by the server for each session. The token is included in forms and requests, and the server validates it before processing the action, ensuring the request is legitimate and came from the original site.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="liveAttacksPage" class="page-content hidden">
+            <h2 class="text-xl font-semibold mb-4 text-teal-400">Interactive Attack Simulators</h2>
+            <div class="space-y-8">
+                <div class="bg-gray-900/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">Cross-Site Scripting (XSS) Simulator</h3>
+                    <p class="text-sm text-gray-400 mt-1 mb-4">Enter a comment below. Try a normal comment first, then try entering <code class="bg-gray-700 text-teal-300 px-1 rounded">&lt;img src=x onerror="alert('Hacked!')"&gt;</code> to see what happens.</p>
+                    <div class="flex space-x-2">
+                        <input type="text" id="xssInput" placeholder="Enter your comment..." class="w-full px-3 py-2 bg-gray-700 text-gray-200 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <button id="xssSubmit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Post</button>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-semibold">Latest Comment:</h4>
+                        <div id="xssOutput" class="p-3 mt-2 bg-gray-700 rounded border border-gray-600 min-h-[40px] text-gray-300"></div>
+                    </div>
+                </div>
+                <div class="bg-gray-900/50 p-4 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">SQL Injection Simulator</h3>
+                    <p class="text-sm text-gray-400 mt-1 mb-4">Our "database" has users with IDs 1, 2, and 3. Search for a valid ID (e.g., <code class="bg-gray-700 text-teal-300 px-1 rounded">2</code>). Then, try a basic SQL injection attack: <code class="bg-gray-700 text-teal-300 px-1 rounded">' OR 1=1; --</code></p>
+                    <div class="flex space-x-2">
+                        <input type="text" id="sqliInput" placeholder="Enter user ID..." class="w-full px-3 py-2 bg-gray-700 text-gray-200 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <button id="sqliSubmit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Search</button>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-sm font-semibold">Query Results:</h4>
+                        <div id="sqliOutput" class="p-3 mt-2 bg-gray-700 rounded border border-gray-600 min-h-[40px] text-gray-300"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="checklistPage" class="page-content hidden">
+            <h2 class="text-xl font-semibold mb-4 text-teal-400">Developer Security Checklist</h2>
+            <p class="text-sm text-gray-400 mb-6">A practical checklist of best practices to enhance your application's security posture.</p>
+            <ul class="space-y-4">
+                <li class="flex items-start"><span class="text-teal-400 mr-3 mt-1">✓</span><div><strong class="text-gray-100">Enforce HTTPS</strong><p class="text-xs text-gray-400">Encrypt all data in transit using SSL/TLS certificates to prevent Man-in-the-Middle attacks.</p></div></li>
+                <li class="flex items-start"><span class="text-teal-400 mr-3 mt-1">✓</span><div><strong class="text-gray-100">Use Strong Password Policies</strong><p class="text-xs text-gray-400">Require complex passwords and never store them in plain text. Always use a modern, salted hashing algorithm like Argon2 or bcrypt.</p></div></li>
+                <li class="flex items-start"><span class="text-teal-400 mr-3 mt-1">✓</span><div><strong class="text-gray-100">Sanitize & Validate All Inputs</strong><p class="text-xs text-gray-400">Treat all user-supplied data as untrusted. Validate it on both the client and server side to prevent injection attacks like XSS and SQLi.</p></div></li>
+                <li class="flex items-start"><span class="text-teal-400 mr-3 mt-1">✓</span><div><strong class="text-gray-100">Implement Security Headers</strong><p class="text-xs text-gray-400">Use headers like Content-Security-Policy (CSP), Strict-Transport-Security (HSTS), and X-Frame-Options to protect against attacks like clickjacking and data injection.</p></div></li>
+                <li class="flex items-start"><span class="text-teal-400 mr-3 mt-1">✓</span><div><strong class="text-gray-100">Keep Dependencies Updated</strong><p class="text-xs text-gray-400">Regularly scan and update all third-party libraries, frameworks, and server software to patch known vulnerabilities.</p></div></li>
+                <li class="flex items-start"><span class="text-teal-400 mr-3 mt-1">✓</span><div><strong class="text-gray-100">Practice Principle of Least Privilege</strong><p class="text-xs text-gray-400">Ensure that applications and database connections only have the permissions absolutely necessary to perform their functions.</p></div></li>
+            </ul>
+        </div>
+        
+        <div id="caseStudiesPage" class="page-content hidden">
+            <h2 class="text-xl font-semibold mb-6 text-teal-400">Real-World Security Breach Case Studies</h2>
+            <div class="space-y-8">
+                <!-- Case Study 1: Equifax -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">Equifax Data Breach (2017)</h3>
+                    <div class="mt-4 border-l-4 border-teal-500 pl-4">
+                        <p class="text-sm text-gray-300"><strong class="text-gray-100">The Attack:</strong> Attackers accessed the personal data of over 147 million people, including names, Social Security numbers, and birth dates.</p>
+                        <p class="text-sm text-gray-300 mt-2"><strong class="text-gray-100">The Vulnerability:</strong> A failure to patch a known critical vulnerability in the Apache Struts web framework, a third-party dependency. The patch had been available for two months.</p>
+                        <p class="text-sm text-gray-300 mt-2"><strong class="text-gray-100">The Impact:</strong> Estimated cost of over $1.4 billion in cleanup and fines. Massive reputational damage.</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">Key Takeaway:</h4>
+                        <p class="text-xs text-gray-400 mt-1">Always keep your dependencies updated. Regularly scan your projects for known vulnerabilities and apply patches immediately.</p>
+                    </div>
+                </div>
+
+                <!-- Case Study 2: RockYou -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">RockYou Data Breach (2009)</h3>
+                    <div class="mt-4 border-l-4 border-teal-500 pl-4">
+                        <p class="text-sm text-gray-300"><strong class="text-gray-100">The Attack:</strong> Attackers exploited a SQL Injection vulnerability to access the user database, exposing over 32 million user accounts.</p>
+                        <p class="text-sm text-gray-300 mt-2"><strong class="text-gray-100">The Vulnerability:</strong> The critical failure was storing all user passwords in <strong class="text-red-400">plain text</strong>. Once the database was breached, all passwords were immediately readable with no cracking required.</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">Key Takeaway:</h4>
+                        <p class="text-xs text-gray-400 mt-1">Never, ever store passwords in plain text. Use a strong, modern, and salted hashing algorithm like Argon2 or bcrypt.</p>
+                    </div>
+                </div>
+
+                <!-- Case Study 3: British Airways -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">British Airways (Magecart) Attack (2018)</h3>
+                    <div class="mt-4 border-l-4 border-teal-500 pl-4">
+                        <p class="text-sm text-gray-300"><strong class="text-gray-100">The Attack:</strong> Attackers injected malicious JavaScript code into the British Airways website. This code skimmed the payment card details of around 500,000 customers.</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">Key Takeaway:</h4>
+                        <p class="text-xs text-gray-400 mt-1">Implement a strict Content-Security-Policy (CSP) to control which scripts can run on your site and where they can send data. This is crucial for preventing data exfiltration.</p>
+                    </div>
+                </div>
+
+                <!-- Case Study 4: Capital One -->
+                <div class="bg-gray-900/50 p-6 rounded-lg">
+                    <h3 class="text-lg font-bold text-gray-100">Capital One Data Breach (2019)</h3>
+                    <div class="mt-4 border-l-4 border-teal-500 pl-4">
+                        <p class="text-sm text-gray-300"><strong class="text-gray-100">The Attack:</strong> A former cloud provider employee exploited a misconfigured web application firewall to gain access to servers and exfiltrate the data of over 100 million customers.</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-gray-700">
+                        <h4 class="text-sm font-semibold text-teal-400">Key Takeaway:</h4>
+                        <p class="text-xs text-gray-400 mt-1">Cloud security requires careful configuration. Apply the Principle of Least Privilege to all cloud roles and resources, and protect against SSRF by validating and restricting all outgoing requests from your servers.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Chatbot UI -->
+    <div id="chat-container" class="fixed bottom-5 right-5 z-50">
+        <!-- Chat Bubble -->
+        <button id="chat-bubble" class="bg-teal-600 text-white w-16 h-16 rounded-full flex items-center justify-center shadow-lg hover:bg-teal-700 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.839 8.839 0 01-4.082-.982L2 18l1.982-3.918A8.962 8.962 0 012 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM4.828 13.172a.75.75 0 001.061 1.061l1.414-1.414a.75.75 0 10-1.06-1.06l-1.415 1.413zm3.536-2.122a.75.75 0 10-1.06-1.06L6.243 11.05a.75.75 0 001.06 1.06l1.06-1.06z" clip-rule="evenodd" />
+            </svg>
+        </button>
+        <!-- Chat Window -->
+        <div id="chat-window" class="hidden absolute bottom-20 right-0 w-80 sm-w-96 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 flex flex-col transform origin-bottom-right" style="height: 500px;">
+            <div class="flex justify-between items-center p-3 border-b border-gray-700 bg-gray-900/50 rounded-t-lg">
+                <h3 class="font-bold text-teal-400">AI Security Assistant</h3>
+                <button id="close-chat" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div id="chat-messages" class="flex-1 p-4 overflow-y-auto flex flex-col space-y-2">
+                <!-- Messages will be appended here -->
+            </div>
+            <div class="p-3 border-t border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <input type="text" id="chat-input" placeholder="Ask about vulnerabilities..." class="w-full px-3 py-2 bg-gray-700 text-gray-200 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <button id="chat-send" class="bg-teal-600 hover:bg-teal-700 text-white font-bold p-2 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                           <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Globals & Selectors ---
+        const loginPage = document.getElementById('loginPage');
+        const appPage = document.getElementById('appPage');
+        const loginButton = document.getElementById('loginButton');
+        const logoutButton = document.getElementById('logoutButton');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginError = document.getElementById('loginError');
+
+        const navLinks = document.querySelectorAll('.nav-link');
+        const pageContents = document.querySelectorAll('.page-content');
+        
+        const resultsDiv = document.getElementById('results');
+        const reportControlsDiv = document.getElementById('reportControls');
+        const pdfButton = document.getElementById('pdfButton');
+        const aiSummaryButton = document.getElementById('aiSummaryButton');
+        const aiSummaryContainer = document.getElementById('aiSummaryContainer');
+
+        // Simulators
+        const xssInput = document.getElementById('xssInput');
+        const xssSubmit = document.getElementById('xssSubmit');
+        const xssOutput = document.getElementById('xssOutput');
+        const sqliInput = document.getElementById('sqliInput');
+        const sqliSubmit = document.getElementById('sqliSubmit');
+        const sqliOutput = document.getElementById('sqliOutput');
+        
+        // AI Chatbot
+        const chatContainer = document.getElementById('chat-container');
+        const chatBubble = document.getElementById('chat-bubble');
+        const chatWindow = document.getElementById('chat-window');
+        const closeChatBtn = document.getElementById('close-chat');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSendBtn = document.getElementById('chat-send');
+        let currentVulnerabilities = [];
+        let chatHistory = [];
+
+        // --- IMPORTANT: ADD YOUR API KEY HERE ---
+        // Get your key from Google AI Studio: https://aistudio.google.com/app/apikey
+        // Replace the placeholder below with your actual API key.
+        const API_KEY = "AIzaSyCkbhcokkXG-zsySyQZozUYazJQbIMXLAA";
+        
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+        const SYSTEM_PROMPT = "You are a friendly and helpful AI Security Assistant. Your expertise is in web application security. Your goal is to explain complex cybersecurity concepts in a simple and understandable way. When asked for suggestions about vulnerabilities, provide clear, actionable steps for developers to fix them. Use markdown for formatting, such as bolding for emphasis and lists for steps. If asked about a topic outside of cybersecurity, politely decline to answer.";
+
+        // --- Login/Logout Logic ---
+        loginButton.addEventListener('click', () => {
+            if (usernameInput.value === 'admin' && passwordInput.value === 'password') {
+                loginPage.classList.add('hidden');
+                appPage.classList.remove('hidden');
+                chatContainer.classList.remove('hidden');
+                showPage('scannerPage');
+                loadScannerUI(); 
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        logoutButton.addEventListener('click', () => {
+            appPage.classList.add('hidden');
+            loginPage.classList.remove('hidden');
+            chatContainer.classList.add('hidden');
+            loginError.classList.add('hidden');
+            usernameInput.value = 'admin';
+            passwordInput.value = 'password';
+        });
+
+        // --- Navigation Logic ---
+        function showPage(targetId) {
+            pageContents.forEach(page => page.classList.add('hidden'));
+            const activePage = document.getElementById(targetId);
+            if (activePage) activePage.classList.remove('hidden');
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.dataset.target === targetId) {
+                    link.classList.add('active');
+                }
+            });
+        }
+        navLinks.forEach(link => link.addEventListener('click', (e) => showPage(e.currentTarget.dataset.target)));
+
+        // --- PDF Generation Logic ---
+        pdfButton.addEventListener('click', () => {
+            if (resultsDiv.classList.contains('hidden')) {
+                showCustomAlert("No Report Found", "Please run a security scan first to generate a report.");
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const reportElement = document.getElementById('results');
+            
+            // Temporarily hide the chatbot and other UI for a clean screenshot
+            const uiElements = document.querySelectorAll('.hide-on-print');
+            uiElements.forEach(el => el.style.display = 'none');
+            const mainContent = document.getElementById('appPage');
+            mainContent.style.backgroundColor = 'white';
+            mainContent.style.color = 'black';
+            
+            html2canvas(reportElement, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasWidth = canvas.width;
+                const canvasHeight = canvas.height;
+                const ratio = canvasWidth / canvasHeight;
+                let imgHeight = pdfWidth / ratio;
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
+
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                    heightLeft -= pdfHeight;
+                }
+                
+                pdf.save('Security-Report.pdf');
+
+                // Restore hidden elements and original styles
+                uiElements.forEach(el => el.style.display = '');
+                mainContent.style.backgroundColor = '';
+                mainContent.style.color = '';
+            }).catch(err => {
+                console.error("PDF generation failed:", err);
+                showCustomAlert("Error", "PDF generation failed. Check the console for details.");
+                // Restore elements in case of error
+                uiElements.forEach(el => el.style.display = '');
+                mainContent.style.backgroundColor = '';
+                mainContent.style.color = '';
+            });
+        });
+
+        // --- Live Attack Simulators ---
+        xssSubmit.addEventListener('click', () => {
+            xssOutput.innerHTML = xssInput.value; // Intentionally vulnerable
+            xssInput.value = '';
+        });
+
+        const mockDb = [
+            { id: 1, name: 'Alice', role: 'User' },
+            { id: 2, name: 'Bob', role: 'User' },
+            { id: 3, name: 'Charlie', role: 'Admin' }
+        ];
+        sqliSubmit.addEventListener('click', () => {
+            const query = sqliInput.value.trim();
+            let results = [];
+            if (query.toLowerCase().includes("' or 1=1")) {
+                results = mockDb;
+            } else {
+                const user = mockDb.find(u => u.id == query);
+                if (user) results.push(user);
+            }
+            sqliOutput.innerHTML = results.length > 0
+                ? results.map(r => `<div>ID: ${r.id}, Name: ${r.name}, Role: ${r.role}</div>`).join('')
+                : 'No user found.';
+            sqliInput.value = '';
+        });
+        
+        // --- Scanner & Report Logic ---
+        function loadScannerUI() {
+            const container = document.getElementById('scanner-ui-container');
+            if(container.innerHTML !== '') return;
+            container.innerHTML = `
+                <h2 class="text-xl font-semibold mb-4 text-teal-400">Vulnerability Scanner</h2>
+                <div class="bg-gray-900/50 p-4 rounded-lg mb-6">
+                    <div class="mb-4">
+                        <label for="targetUrl" class="block text-sm font-medium text-gray-300 mb-2">Target URL</label>
+                        <input type="text" id="targetUrl" value="https://example.com" class="w-full px-3 py-2 bg-gray-700 text-gray-200 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div><label class="flex items-center"><input type="checkbox" data-scan="headers" class="custom-checkbox h-4 w-4 mr-2 rounded bg-gray-600 border-gray-500" checked> Security Headers</label></div>
+                        <div><label class="flex items-center"><input type="checkbox" data-scan="xss" class="custom-checkbox h-4 w-4 mr-2 rounded bg-gray-600 border-gray-500" checked> XSS</label></div>
+                        <div><label class="flex items-center"><input type="checkbox" data-scan="sqli" class="custom-checkbox h-4 w-4 mr-2 rounded bg-gray-600 border-gray-500" checked> SQL Injection</label></div>
+                        <div><label class="flex items-center"><input type="checkbox" data-scan="deps" class="custom-checkbox h-4 w-4 mr-2 rounded bg-gray-600 border-gray-500"> Outdated Deps</label></div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-2">
+                        <button id="clearButton" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg">Clear</button>
+                        <button id="scanButton" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg">Start Scan</button>
+                    </div>
+                </div>
+                <div class="bg-gray-900/50 p-4 rounded-lg mb-6">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="aiAnalysisCheckbox" class="custom-checkbox h-4 w-4 rounded bg-gray-600 border-gray-500">
+                        <label for="aiAnalysisCheckbox" class="text-sm font-medium text-gray-300">Enable AI-Enhanced Analysis</label>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        Instead of a random simulation, the bot will use AI to generate a more detailed, realistic report. Note: This does NOT perform a real scan.
+                    </p>
+                </div>
+            `;
+            document.getElementById('scanButton').addEventListener('click', runScan);
+            document.getElementById('clearButton').addEventListener('click', clearResults);
+            aiSummaryButton.addEventListener('click', generateAiSummary);
+        }
+
+        async function runScan() {
+            const scanButton = document.getElementById('scanButton');
+            scanButton.textContent = 'Scanning...';
+            scanButton.disabled = true;
+            aiSummaryButton.classList.add('hidden');
+            aiSummaryContainer.classList.add('hidden');
+            
+            const selectedScans = Array.from(document.querySelectorAll('input[data-scan]:checked')).map(cb => cb.dataset.scan);
+            const targetUrl = document.getElementById('targetUrl').value;
+            const isAIAnalysis = document.getElementById('aiAnalysisCheckbox')?.checked;
+
+            let results = [];
+            if (isAIAnalysis) {
+                const aiResponse = await performAIAnalysis(targetUrl, selectedScans);
+                 if (aiResponse.startsWith("Error:")) {
+                    resultsDiv.innerHTML = `<p class="text-red-400 p-4">${aiResponse}</p>`;
+                    resultsDiv.classList.remove('hidden');
+                    scanButton.textContent = 'Start Scan';
+                    scanButton.disabled = false;
+                    return;
+                }
+                try {
+                    results = JSON.parse(aiResponse);
+                } catch (e) {
+                    console.error("Failed to parse AI response:", aiResponse);
+                    showCustomAlert("Error", "Failed to parse the AI report. The bot may have returned an invalid JSON object. Please try again or disable AI-Enhanced Analysis.");
+                    scanButton.textContent = 'Start Scan';
+                    scanButton.disabled = false;
+                    return;
+                }
+            } else {
+                results = simulateScan(targetUrl, selectedScans);
+            }
+
+            currentVulnerabilities = results.filter(r => r.status === 'Vulnerable');
+            renderReport(results);
+            scanButton.textContent = 'Start Scan';
+            scanButton.disabled = false;
+            
+            if (currentVulnerabilities.length > 0) {
+                aiSummaryButton.classList.remove('hidden');
+            }
+
+            // Enable AI chat to analyze the report
+            if (chatWindow.classList.contains('hidden') && currentVulnerabilities.length > 0) {
+                 addMessageToChat('ai', 'A new security report is available. Click the "Get AI Insights" button to analyze it.', false, `<button id="chatAiInsightBtn" class="bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold py-1 px-3 rounded-lg shadow-md transition duration-300 mt-2">✨ Get AI Insights</button>`);
+                 document.getElementById('chatAiInsightBtn').addEventListener('click', () => {
+                    chatInput.value = "Can you analyze the current security report for me and suggest fixes?";
+                    handleUserMessage();
+                 });
+            }
+        }
+        
+        // New LLM-powered analysis function
+        async function performAIAnalysis(url, scanTypes) {
+            let findings = [];
+            const isSecure = url.startsWith('https://');
+
+            // --- Hardcoded HTTPS Check ---
+            findings.push({
+                title: 'HTTPS Connection Check',
+                status: isSecure ? 'Passed' : 'Vulnerable',
+                severity: isSecure ? 'Low' : 'High',
+                description: isSecure ? 'The website uses a secure HTTPS connection.' : 'The website uses an insecure HTTP connection. Data transmitted is not encrypted.',
+            });
+
+            // --- AI-Generated checks for other vulnerabilities ---
+            const aiScanTypes = scanTypes.filter(s => s !== 'https');
+            if (aiScanTypes.length > 0) {
+                 const prompt = `As a security bot, generate a simulated security report for the URL "${url}" based on the following checks: ${aiScanTypes.join(', ')}. The report should be a JSON array of objects. Each object should have 'title', 'status' (either 'Passed' or 'Vulnerable'), 'severity' (from 'Critical', 'High', 'Medium', 'Low'), and a 'description'. Use a realistic and concise tone. For example, if 'xss' is in the scanTypes, you could add an item with the title 'Reflected XSS Vulnerability' and a description like 'The search parameter is not properly sanitized, leading to a potential reflected XSS vulnerability.'.`;
+
+                 const aiResponse = await callGeminiAPI(prompt, true);
+                 try {
+                     const aiFindings = JSON.parse(aiResponse);
+                     findings = findings.concat(aiFindings);
+                 } catch (e) {
+                     console.error("Failed to parse AI response:", aiResponse);
+                     return `Error: Failed to parse the AI report. It might have returned an invalid JSON object.`;
+                 }
+            }
+            
+            return JSON.stringify(findings);
+        }
+
+        function calculateGrade(results) {
+            let score = 100;
+            const deductions = { 'Critical': 25, 'High': 15, 'Medium': 10, 'Low': 5 };
+            
+            results.forEach(item => {
+                if (item.status === 'Vulnerable') {
+                    score -= deductions[item.severity] || 0;
+                }
+            });
+            score = Math.max(0, score);
+
+            let grade = 'F';
+            if (score >= 95) grade = 'A+';
+            else if (score >= 90) grade = 'A';
+            else if (score >= 80) grade = 'B';
+            else if (score >= 70) grade = 'C';
+            else if (score >= 60) grade = 'D';
+
+            const gradeColors = { 'A+': 'bg-green-600', 'A': 'bg-green-600', 'B': 'bg-yellow-500', 'C': 'bg-orange-500', 'D': 'bg-red-500', 'F': 'bg-red-700'};
+            
+            return { score, grade, color: gradeColors[grade] };
+        }
+
+        function simulateScan(url, scanTypes) {
+            let findings = [];
+            const isSecure = url.startsWith('https://');
+
+            // --- HTTPS Check ---
+            findings.push({
+                title: 'HTTPS Connection Check',
+                status: isSecure ? 'Passed' : 'Vulnerable',
+                severity: 'High',
+                description: isSecure ? 'The website uses a secure HTTPS connection.' : 'The website uses an insecure HTTP connection. Data transmitted is not encrypted.',
+            });
+
+            // --- Other checks (fixed vulnerabilities for consistent reports) ---
+            if (scanTypes.includes('headers')) {
+                findings.push({ 
+                    title: 'Content-Security-Policy (CSP) Header', 
+                    status: 'Vulnerable', 
+                    severity: 'Medium',
+                    description: 'CSP header not found. This can make your site vulnerable to XSS and data injection attacks.' 
+                });
+                findings.push({ 
+                    title: 'HTTP Strict-Transport-Security (HSTS)', 
+                    status: 'Passed', 
+                    severity: 'Low',
+                    description: 'HSTS header is correctly implemented, enforcing secure (HTTPS) connections.' 
+                });
+            }
+            if (scanTypes.includes('xss')) {
+                findings.push({ 
+                    title: 'Reflected Cross-Site Scripting (XSS)', 
+                    status: 'Vulnerable', 
+                    severity: 'High',
+                    description: 'A potential XSS vector was found in a GET parameter. This could allow an attacker to execute scripts in a user\'s browser.'
+                });
+            }
+            if (scanTypes.includes('sqli')) {
+                findings.push({ 
+                    title: 'SQL Injection (SQLi)', 
+                    status: 'Passed', 
+                    severity: 'Critical',
+                    description: 'No common SQL Injection patterns were detected.'
+                });
+            }
+            if (scanTypes.includes('deps')) {
+                findings.push({ 
+                    title: 'Outdated Dependencies', 
+                    status: 'Vulnerable', 
+                    severity: 'High',
+                    description: 'The site uses an outdated library with known vulnerabilities.'
+                });
+            }
+            return findings;
+        }
+
+        function renderReport(results) {
+            const targetUrl = document.getElementById('targetUrl').value;
+            const statusColors = { 'Vulnerable': 'border-red-500', 'Passed': 'border-green-500' };
+            
+            const { score, grade, color } = calculateGrade(results);
+            const textColors = { 'Critical': 'text-red-500', 'High': 'text-red-400', 'Medium': 'text-yellow-400', 'Low': 'text-gray-300' };
+
+            const reportHTML = `
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-teal-400">Security Report for: ${targetUrl}</h2>
+                        <p class="text-xs text-gray-400">Generated on: ${new Date().toLocaleString()}</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="font-bold text-5xl ${color.replace('bg', 'text')}">${grade}</div>
+                        <div class="text-sm text-gray-300">Score: ${score}/100</div>
+                    </div>
+                </div>
+                ${results.map(item => `
+                    <div class="mb-4 p-4 border-l-4 ${statusColors[item.status]} rounded-r-lg bg-gray-900/50">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-semibold text-lg text-gray-100">${item.title}</h3>
+                            ${item.status === 'Vulnerable' 
+                                ? `<span class="font-bold text-sm px-2 py-1 rounded ${textColors[item.severity]}">${item.severity.toUpperCase()}</span>`
+                                : `<span class="font-bold text-sm text-green-400">PASSED</span>`
+                            }
+                        </div>
+                        <p class="text-sm text-gray-300 mt-1">${item.description}</p>
+                    </div>
+                `).join('')}
+            `;
+            resultsDiv.innerHTML = reportHTML;
+            resultsDiv.classList.remove('hidden');
+            reportControlsDiv.classList.remove('hidden');
+            aiSummaryContainer.classList.add('hidden');
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.add('hidden');
+            reportControlsDiv.classList.add('hidden');
+            currentVulnerabilities = [];
+            aiSummaryContainer.classList.add('hidden');
+            aiSummaryButton.classList.add('hidden');
+        }
+
+        // --- Gemini API Logic ---
+        async function callGeminiAPI(prompt, isJson = false, retries = 3, delay = 1000) {
+            const API_KEY = "AIzaSyBcJ0pdIYyFsFXBirZ7FL3ay3uSD4s1JYs";
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+            const SYSTEM_PROMPT = "You are a friendly and helpful AI Security Assistant. Your expertise is in web application security. Your goal is to explain complex cybersecurity concepts in a simple and understandable way. When asked for suggestions about vulnerabilities, provide clear, actionable steps for developers to fix them. Use markdown for formatting, such as bolding for emphasis and lists for steps. If asked about a topic outside of cybersecurity, politely decline to answer.";
+
+            if (API_KEY === "" || API_KEY === "") {
+                return "Error: API Key not configured. Please add your Gemini API key to the script.";
+            }
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: SYSTEM_PROMPT }]
+                },
+            };
+
+            if (isJson) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                "title": { "type": "STRING" },
+                                "status": { "type": "STRING" },
+                                "severity": { "type": "STRING" },
+                                "description": { "type": "STRING" }
+                            },
+                            "propertyOrdering": ["title", "status", "severity", "description"]
+                        }
+                    }
+                };
+            }
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error(`API Error Response (Status ${response.status}):`, errorText);
+                        if (response.status === 400 && errorText.includes("expired")) {
+                            return "Error: API key expired. Please generate a new key from Google AI Studio and replace it in the code.";
+                        }
+                        return `Error: API request failed with status ${response.status}. Message: ${errorText.substring(0, 100)}...`;
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        return candidate.content.parts[0].text;
+                    } else {
+                        console.error("Invalid response structure from API:", result);
+                        return "Error: Invalid response from the AI. It did not return a valid report.";
+                    }
+                } catch (error) {
+                    console.error(`Gemini API call attempt ${i + 1} failed:`, error);
+                    if (i < retries - 1) {
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        return "Error: I'm having trouble connecting to the AI service. This could be due to a network issue or an invalid API key.";
+                    }
+                }
+            }
+        }
+        
+        function formatAIResponse(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-teal-300">$1</strong>')
+                .replace(/```(html|css|javascript|bash|sh|)\s*([\s\S]*?)```/g, '<pre class="bg-gray-900 p-3 rounded text-sm my-2 text-white/80 overflow-x-auto"><code>$2</code></pre>')
+                .replace(/`(.*?)`/g, '<code class="bg-gray-700 text-teal-300 px-1 rounded">$1</code>')
+                .replace(/^\s*\n/gm, '')
+                .replace(/\n/g, '<br>');
+        }
+
+        async function generateAiSummary() {
+            aiSummaryButton.disabled = true;
+            aiSummaryButton.textContent = '✨ Generating...';
+            aiSummaryContainer.classList.remove('hidden');
+            aiSummaryContainer.innerHTML = `<div class="flex items-center justify-center text-gray-400"><p>Analyzing vulnerabilities</p><div class="loading-dots ml-2"><span>.</span><span>.</span><span>.</span></div></div>`;
+
+            const vulnerabilityText = currentVulnerabilities.map(v => `- ${v.title} (${v.severity}): ${v.description}`).join('\n');
+            const prompt = `As a cybersecurity expert, analyze the following vulnerabilities found during a security scan. Provide a brief, high-level summary of the overall security posture first. Then, for each vulnerability, provide a clear, step-by-step remediation plan that a developer can follow.\n\nVulnerabilities:\n${vulnerabilityText}`;
+            
+            const summaryText = await callGeminiAPI(prompt);
+            
+            const formattedSummary = formatAIResponse(summaryText);
+
+            aiSummaryContainer.innerHTML = `<h3 class="text-lg font-bold text-teal-400 mb-4">✨ AI-Generated Analysis & Remediation Plan</h3><div class="text-sm text-gray-300 space-y-4">${formattedSummary}</div>`;
+            aiSummaryButton.disabled = false;
+            aiSummaryButton.textContent = '✨ Generate AI Summary & Fixes';
+        }
+
+        // --- AI Chatbot Logic ---
+        chatBubble.addEventListener('click', () => {
+            chatWindow.classList.toggle('hidden');
+        });
+        closeChatBtn.addEventListener('click', () => {
+            chatWindow.classList.add('hidden');
+        });
+        chatSendBtn.addEventListener('click', handleUserMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleUserMessage();
+        });
+
+        async function handleUserMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+            addMessageToChat('user', message);
+            chatInput.value = '';
+            chatSendBtn.disabled = true;
+
+            const loadingIndicator = addMessageToChat('ai', `<div class="loading-dots"><span>.</span><span>.</span><span>.</span></div>`, true);
+            
+            const aiResponse = await callGeminiAPI(message); 
+            const formattedResponse = formatAIResponse(aiResponse);
+            
+            loadingIndicator.innerHTML = formattedResponse;
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            chatSendBtn.disabled = false;
+        }
+
+        function addMessageToChat(sender, message, isLoading = false, extraHtml = '') {
+            const messageDiv = document.createElement('div');
+            const messageClass = sender === 'user' ? 'user-message' : 'ai-message';
+            messageDiv.className = `chat-message p-3 rounded-lg ${messageClass}`;
+            messageDiv.innerHTML = message + extraHtml;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            if (isLoading) return messageDiv;
+        }
+
+        // Custom Modal
+        const alertModal = document.createElement('div');
+        alertModal.id = 'alertModal';
+        alertModal.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden';
+        alertModal.innerHTML = `
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl max-w-sm w-full border border-gray-600">
+                <h3 class="text-lg font-bold text-red-400 mb-2" id="alertTitle"></h3>
+                <p class="text-gray-300 mb-4" id="alertMessage"></p>
+                <div class="text-right">
+                    <button id="closeAlert" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition duration-300">OK</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(alertModal);
+
+        function showCustomAlert(title, message) {
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+            alertModal.classList.remove('hidden');
+        }
+
+        document.getElementById('closeAlert').addEventListener('click', () => {
+            alertModal.classList.add('hidden');
+        });
+
+        // Initial setup on app load
+        addMessageToChat('ai', 'Welcome! I am a Gemini-powered AI Security Assistant. Run a scan or ask me a question about web security.');
+        chatContainer.classList.add('hidden'); // Initially hidden until login
+
+    });
+    </script>
+</body>
+</html>
